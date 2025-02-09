@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 )
 
 // Advanced XSS payloads for testing
@@ -51,7 +52,7 @@ func testXSS(targetURL string, param string, payload string) bool {
 	// Create a new URL with the payload
 	u, err := url.Parse(targetURL)
 	if err != nil {
-		fmt.Printf("Error parsing URL: %s\n", err)
+		typeText("Error parsing URL: " + err.Error() + "\n")
 		return false
 	}
 
@@ -63,7 +64,7 @@ func testXSS(targetURL string, param string, payload string) bool {
 	// Send a GET request to the target URL
 	resp, err := http.Get(u.String())
 	if err != nil {
-		fmt.Printf("Error sending request: %s\n", err)
+		typeText("Error sending request: " + err.Error() + "\n")
 		return false
 	}
 	defer resp.Body.Close()
@@ -79,30 +80,72 @@ func testXSS(targetURL string, param string, payload string) bool {
 	return false
 }
 
+// Function to display a typing animation effect
+func typeText(text string) {
+	for _, char := range text {
+		fmt.Print(string(char))
+		time.Sleep(50 * time.Millisecond) // Adjust the delay for the typing speed
+	}
+}
+
+// Function to display a scanning effect
+func showScanningEffect(done chan bool) {
+	chars := []string{"|", "/", "-", "\\"}
+	for {
+		select {
+		case <-done:
+			fmt.Printf("\r")
+			typeText("Scanning complete!\n")
+			return
+		default:
+			for _, char := range chars {
+				fmt.Printf("\rScanning %s", char)
+				time.Sleep(100 * time.Millisecond)
+			}
+		}
+	}
+}
+
 func main() {
-	// Check if the user provided a target URL
+	
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: go run xss_scanner.go <target_url>")
+		typeText("Usage: go run xss_scanner.go <target_url>\n")
 		return
 	}
 
 	targetURL := os.Args[1]
 
-	// Extract query parameters from the target URL
+	
 	u, err := url.Parse(targetURL)
 	if err != nil {
-		fmt.Printf("Error parsing URL: %s\n", err)
+		typeText("Error parsing URL: " + err.Error() + "\n")
 		return
 	}
 
 	params := u.Query()
 
+	
+	done := make(chan bool)
+
+	
+	go showScanningEffect(done)
+
 	// Test each parameter for XSS vulnerability
+	vulnerabilitiesFound := false
 	for param := range params {
 		for _, payload := range xssPayloads {
 			if testXSS(targetURL, param, payload) {
-				fmt.Printf("[+] XSS Vulnerability found in parameter: %s with payload: %s\n", param, payload)
+				typeText(fmt.Sprintf("\r[+] XSS Vulnerability found in parameter: %s with payload: %s\n", param, payload))
+				vulnerabilitiesFound = true
 			}
 		}
+	}
+
+	
+	done <- true
+
+	
+	if !vulnerabilitiesFound {
+		typeText("\rNo XSS vulnerabilities found.\n")
 	}
 }
